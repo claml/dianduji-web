@@ -77,4 +77,20 @@ describe('WebDictionary lookup', () => {
     });
     await expect(broken.lookup('model')).rejects.toThrow('offline');
   });
+
+  it('prefetches chunks in the background without failing lookups', async () => {
+    const loaded = new Set<string>();
+    const dict = new WebDictionary(async (name) => {
+      loaded.add(name);
+      return loadChunkFromDisk(name);
+    });
+    dict.prefetch(['a', 'm', 'zzz-unknown']);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(loaded.has('a')).toBe(true);
+    expect(loaded.has('m')).toBe(true);
+    // A later lookup of a prefetched chunk does not reload it.
+    const before = loaded.size;
+    await dict.lookup('model');
+    expect(loaded.size).toBe(before);
+  });
 });

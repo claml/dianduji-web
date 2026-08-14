@@ -64,6 +64,17 @@ export class WebDictionary {
     return pending;
   }
 
+  /** Warm up chunks in the background (fire-and-forget). */
+  prefetch(letters: string[]): void {
+    for (const letter of letters) {
+      if (!this.chunks.has(letter)) {
+        this.loadChunk(letter).catch(() => {
+          // Prefetch failures are fine; lookups retry on demand.
+        });
+      }
+    }
+  }
+
   private toEntry(word: string, raw: RawEntry): DictionaryEntry {
     return {
       word,

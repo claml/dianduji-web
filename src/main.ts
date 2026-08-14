@@ -122,6 +122,14 @@ function applyTheme(theme: string): void {
 }
 
 const dictionary = new WebDictionary(fetchChunkLoader());
+// Warm the most frequent first letters (English word frequency) so the
+// first taps are instant.
+const idleCallback = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+if (typeof idleCallback === 'function') {
+  idleCallback(() => dictionary.prefetch(['e', 't', 'a', 'o', 'i', 'n', 's', 'r', 'm']));
+} else {
+  setTimeout(() => dictionary.prefetch(['e', 't', 'a', 'o', 'i', 'n', 's', 'r', 'm']), 2000);
+}
 const specialized = new SpecializedDictionary();
 const phraseDict = new PhraseDictionary();
 const translator = new GatewayTranslator();
@@ -666,6 +674,19 @@ function refreshSyncUi(): void {
   if (loggedIn && syncEngine.user) {
     syncUserLabel.textContent = `已登录：${syncEngine.user.username}`;
   }
+  if (loggedIn) {
+    try {
+      const lastSync = localStorage.getItem('dianduji.lastSync');
+      if (lastSync) {
+        const time = new Date(lastSync);
+        const two = (value: number) => value.toString().padStart(2, '0');
+        syncStatus.textContent =
+          `上次同步 ${two(time.getHours())}:${two(time.getMinutes())}`;
+      }
+    } catch {
+      // storage unavailable
+    }
+  }
 }
 
 async function runAuth(action: () => Promise<void>): Promise<void> {
@@ -707,6 +728,11 @@ syncNow.addEventListener('click', async () => {
     syncStatus.textContent = outcome.pushedLocal
       ? '已推送本地数据'
       : '已应用云端数据';
+    try {
+      localStorage.setItem('dianduji.lastSync', new Date().toISOString());
+    } catch {
+      // storage unavailable
+    }
     await renderBook();
     applyReadingStyle();
     applyTheme(localStorage.getItem(THEME_KEY) ?? 'system');
