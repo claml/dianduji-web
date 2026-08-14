@@ -1,6 +1,6 @@
 import './style.css';
 import { PdfViewer } from './pdf-viewer';
-import { lookupMini, miniEntryCount } from './mini-dictionary';
+import { fetchChunkLoader, WebDictionary } from './dictionary';
 
 const fileInput = document.querySelector<HTMLInputElement>('#file-input')!;
 const openBtn = document.querySelector<HTMLButtonElement>('#open-btn')!;
@@ -10,6 +10,7 @@ const emptyState = document.querySelector<HTMLElement>('#empty-state')!;
 const wordCard = document.querySelector<HTMLElement>('#word-card')!;
 const wordSurface = document.querySelector<HTMLElement>('#word-surface')!;
 const wordPhonetic = document.querySelector<HTMLElement>('#word-phonetic')!;
+const wordPos = document.querySelector<HTMLElement>('#word-pos')!;
 const wordMeaning = document.querySelector<HTMLElement>('#word-meaning')!;
 const wordSource = document.querySelector<HTMLElement>('#word-source')!;
 const wordClose = document.querySelector<HTMLButtonElement>('#word-close')!;
@@ -20,17 +21,35 @@ const zoomOutBtn = document.querySelector<HTMLButtonElement>('#zoom-out')!;
 const pageLabel = document.querySelector<HTMLElement>('#page-label')!;
 const zoomLabel = document.querySelector<HTMLElement>('#zoom-label')!;
 
+const dictionary = new WebDictionary(fetchChunkLoader());
 const viewer = new PdfViewer(canvas, textLayer, showWord);
 
-function showWord(word: string): void {
-  const entry = lookupMini(word);
+async function showWord(word: string): Promise<void> {
   wordSurface.textContent = word;
-  wordPhonetic.textContent = entry?.phonetic ?? '';
-  wordMeaning.textContent = entry?.meaning ?? '本地词典未收录';
-  wordSource.textContent = entry
-    ? `内置演示词表（共 ${miniEntryCount} 词；M2 将接入 ECDICT 词库）`
-    : '词表未收录（M2 将接入 ECDICT 词库）';
+  wordPhonetic.textContent = '';
+  wordPos.textContent = '';
+  wordMeaning.textContent = '查询中…';
+  wordSource.textContent = 'ECDICT 词库（首次查询该字母块会稍慢）';
   wordCard.hidden = false;
+  try {
+    const entry = await dictionary.lookup(word);
+    if (entry) {
+      wordSurface.textContent = entry.word;
+      wordPhonetic.textContent = entry.phonetic ? `/${entry.phonetic}/` : '';
+      wordPos.textContent = entry.partOfSpeech;
+      const lines = [entry.definitionChinese, entry.definitionEnglish]
+        .map((text) => text.trim())
+        .filter(Boolean);
+      wordMeaning.textContent = lines.join('\n');
+      wordSource.textContent = 'ECDICT 词库（MIT）';
+    } else {
+      wordMeaning.textContent = '词典未收录该词';
+      wordSource.textContent = 'ECDICT 词库（MIT）';
+    }
+  } catch {
+    wordMeaning.textContent = '词典加载失败，请检查网络后重试';
+    wordSource.textContent = '';
+  }
 }
 
 function refreshChrome(): void {

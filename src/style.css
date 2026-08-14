@@ -119,13 +119,25 @@ canvas { display: block; box-shadow: 0 2px 14px rgb(0 0 0 / 0.18); background: #
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 #word-surface { font-size: 20px; font-weight: 700; }
+
+#word-pos {
+  flex: 1;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgb(47 111 237 / 0.1);
+  border-radius: 999px;
+  padding: 2px 8px;
+  align-self: center;
+}
+
 #word-close { border: none; background: none; font-size: 18px; color: var(--muted); }
 
 #word-phonetic { color: var(--muted); margin-top: 2px; }
-#word-meaning { margin-top: 8px; line-height: 1.6; }
+#word-meaning { margin-top: 8px; line-height: 1.7; white-space: pre-line; }
 #word-source { margin-top: 10px; font-size: 12px; }
 
 .hint { color: var(--muted); font-size: 13px; }
