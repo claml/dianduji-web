@@ -672,9 +672,23 @@ async function runAuth(action: () => Promise<void>): Promise<void> {
   syncStatus.textContent = '处理中…';
   try {
     await action();
-    syncStatus.textContent = '成功';
     syncPassword.value = '';
     refreshSyncUi();
+    // First sync runs right after login so the device picks up the cloud
+    // snapshot immediately.
+    syncStatus.textContent = '登录成功，正在同步…';
+    try {
+      const outcome = await syncEngine.syncNow();
+      syncStatus.textContent = outcome.pushedLocal
+        ? '登录成功，已推送本地数据'
+        : '登录成功，已应用云端数据';
+      await renderBook();
+      applyReadingStyle();
+      applyTheme(localStorage.getItem(THEME_KEY) ?? 'system');
+    } catch (error) {
+      syncStatus.textContent = `${'登录成功'}；同步失败：${syncUiMessage(error)}`;
+      refreshSyncUi();
+    }
   } catch (error) {
     syncStatus.textContent = syncUiMessage(error);
   }
