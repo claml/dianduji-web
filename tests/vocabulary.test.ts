@@ -4,13 +4,15 @@ import { VocabularyBook } from '../src/vocabulary';
 
 async function clearStore(): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open('dianduji', 2);
+    const request = indexedDB.open('dianduji', 3);
     request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains('vocabulary')) {
-        request.result.createObjectStore('vocabulary', { keyPath: 'word' });
-      }
-      if (!request.result.objectStoreNames.contains('reading')) {
-        request.result.createObjectStore('reading', { keyPath: 'id' });
+      const db = request.result;
+      for (const store of ['vocabulary', 'reading', 'custom-defs', 'phrases']) {
+        if (!db.objectStoreNames.contains(store)) {
+          db.createObjectStore(store, {
+            keyPath: store === 'vocabulary' || store === 'custom-defs' ? 'word' : 'id',
+          });
+        }
       }
     };
     request.onsuccess = () => {

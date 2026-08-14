@@ -6,9 +6,11 @@
  */
 
 export const DB_NAME = 'dianduji';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const VOCABULARY_STORE = 'vocabulary';
 export const READING_STORE = 'reading';
+export const CUSTOM_DEFS_STORE = 'custom-defs';
+export const PHRASES_STORE = 'phrases';
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,6 +22,12 @@ export function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(READING_STORE)) {
         db.createObjectStore(READING_STORE, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(CUSTOM_DEFS_STORE)) {
+        db.createObjectStore(CUSTOM_DEFS_STORE, { keyPath: 'word' });
+      }
+      if (!db.objectStoreNames.contains(PHRASES_STORE)) {
+        db.createObjectStore(PHRASES_STORE, { keyPath: 'id' });
       }
     };
     request.onsuccess = () => resolve(request.result);

@@ -30,6 +30,7 @@
         <canvas id="pdf-canvas"></canvas>
         <div id="text-layer"></div>
       </div>
+      <div id="txt-view" hidden></div>
       <div id="empty-state">
         <p>打开一份 PDF 开始点读</p>
         <p class="hint">本地解析，文档不上传；点按英文单词查看释义</p>
@@ -47,6 +48,20 @@
           <span id="word-spec-domain"></span>
           <span id="word-spec-definition"></span>
         </div>
+        <div id="word-custom-def" hidden>
+          <span class="ws-label">自定义释义</span>
+          <span id="word-custom-def-text"></span>
+        </div>
+        <div id="word-sentence" hidden>
+          <span class="ws-label">原文</span>
+          <div id="word-sentence-text"></div>
+          <div id="sentence-actions">
+            <button id="sentence-translate">翻译整句</button>
+            <button id="sentence-save" title="收藏到句子本">☆ 收藏句子</button>
+          </div>
+          <div id="sentence-translation" class="ws-translation" hidden></div>
+        </div>
+        <button id="custom-def-add" hidden>＋ 添加自定义释义</button>
         <div id="word-source" class="hint"></div>
       </aside>
 
@@ -61,11 +76,15 @@
 
       <aside id="book-panel" hidden>
         <div id="book-head">
-          <span>生词本</span>
+          <span>收藏</span>
+          <span id="book-tabs">
+            <button id="tab-words" class="tab active">生词</button>
+            <button id="tab-phrases" class="tab">句子</button>
+          </span>
           <button id="book-close" title="关闭">×</button>
         </div>
         <div id="book-list"></div>
-        <div id="book-empty" class="hint">还没有收藏的单词</div>
+        <div id="book-empty" class="hint">还没有收藏的内容</div>
       </aside>
 
       <div id="settings-overlay" hidden>
@@ -79,9 +98,29 @@
             <input id="online-enabled" type="checkbox" />
             词库未收录时尝试在线翻译
           </label>
+          <label>
+            主题
+            <select id="theme-select">
+              <option value="system">跟随系统</option>
+              <option value="light">日间</option>
+              <option value="dark">夜间</option>
+            </select>
+          </label>
           <div id="settings-actions">
             <button id="settings-save">保存</button>
             <button id="settings-cancel">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="custom-def-overlay" hidden>
+        <div id="custom-def-box">
+          <h3>添加自定义释义</h3>
+          <div class="cd-word" id="custom-def-word"></div>
+          <textarea id="custom-def-input" rows="3" placeholder="输入这个词的语境化中文释义…"></textarea>
+          <div id="settings-actions">
+            <button id="custom-def-save">保存</button>
+            <button id="custom-def-cancel">取消</button>
           </div>
         </div>
       </div>

@@ -4,14 +4,15 @@ import { documentId, ReadingStore } from '../src/reading-state';
 
 async function clearReading(): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open('dianduji', 2);
+    const request = indexedDB.open('dianduji', 3);
     request.onupgradeneeded = () => {
       const db = request.result;
-      if (!db.objectStoreNames.contains('vocabulary')) {
-        db.createObjectStore('vocabulary', { keyPath: 'word' });
-      }
-      if (!db.objectStoreNames.contains('reading')) {
-        db.createObjectStore('reading', { keyPath: 'id' });
+      for (const store of ['vocabulary', 'reading', 'custom-defs', 'phrases']) {
+        if (!db.objectStoreNames.contains(store)) {
+          db.createObjectStore(store, {
+            keyPath: store === 'vocabulary' || store === 'custom-defs' ? 'word' : 'id',
+          });
+        }
       }
     };
     request.onsuccess = () => {

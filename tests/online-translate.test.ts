@@ -19,7 +19,11 @@ describe('GatewayTranslator', () => {
     const outcome = await translator.translate('architecture');
     expect(outcome).toEqual({
       ok: true,
-      result: { termTranslation: '架构', sourceId: 'tencent-tmt' },
+      result: {
+        termTranslation: '架构',
+        sentenceTranslation: '',
+        sourceId: 'tencent-tmt',
+      },
     });
     expect(fetchImpl).toHaveBeenCalledWith(
       'http://gw/translate',

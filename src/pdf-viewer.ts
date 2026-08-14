@@ -13,7 +13,11 @@ interface TextRunLike {
   height: number;
 }
 
-export type WordTapHandler = (word: string, tokenIndex: number) => void;
+export type WordTapHandler = (
+  word: string,
+  tokenIndex: number,
+  sentence: string,
+) => void;
 
 /** Structural view of a pdf.js outline item. */
 export interface OutlineLike {
@@ -32,6 +36,8 @@ export class PdfViewer {
 
   /** Tokens of the rendered page in visual order (one per clickable span). */
   private pageTokens: string[] = [];
+  /** Source text run each token came from (the tap "sentence"). */
+  private runSentences: string[] = [];
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -49,6 +55,10 @@ export class PdfViewer {
 
   get tokens(): string[] {
     return this.pageTokens;
+  }
+
+  sentenceOf(tokenIndex: number): string {
+    return this.runSentences[tokenIndex] ?? '';
   }
 
   async getOutline(): Promise<OutlineLike[] | null> {
@@ -125,6 +135,7 @@ export class PdfViewer {
       .map((item) => item as unknown as TextRunLike);
 
     this.pageTokens = [];
+    this.runSentences = [];
     let tokenIndex = 0;
     for (const item of items) {
       const tokens = tokenizeItem(item.str);
@@ -147,10 +158,11 @@ export class PdfViewer {
         const index = tokenIndex;
         span.addEventListener('click', () => {
           span.classList.add('hit');
-          this.onWordTap(token.text, index);
+          this.onWordTap(token.text, index, item.str.trim());
         });
         this.textLayer.appendChild(span);
         this.pageTokens.push(token.text);
+        this.runSentences.push(item.str.trim());
         tokenIndex++;
       }
     }
