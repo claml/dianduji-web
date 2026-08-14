@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>典读鸡 · Web 版</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header id="toolbar">
+      <span class="brand">典读鸡 <small>Web</small></span>
+      <button id="open-btn" title="打开 PDF">打开 PDF</button>
+      <input id="file-input" type="file" accept="application/pdf,.pdf" hidden />
+      <span class="spacer"></span>
+      <button id="zoom-out" title="缩小">−</button>
+      <span id="zoom-label">100%</span>
+      <button id="zoom-in" title="放大">＋</button>
+      <span class="sep"></span>
+      <button id="prev-page" title="上一页">‹</button>
+      <span id="page-label">– / –</span>
+      <button id="next-page" title="下一页">›</button>
+    </header>
+
+    <main id="viewer">
+      <div id="pdf-canvas-wrap">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="text-layer"></div>
+      </div>
+      <div id="empty-state">
+        <p>打开一份 PDF 开始点读</p>
+        <p class="hint">本地解析，文档不上传；点按英文单词查看释义</p>
+      </div>
+      <aside id="word-card" hidden>
+        <div id="word-card-head">
+          <span id="word-surface"></span>
+          <button id="word-close" title="关闭">×</button>
+        </div>
+        <div id="word-phonetic"></div>
+        <div id="word-meaning"></div>
+        <div id="word-source" class="hint"></div>
+      </aside>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
