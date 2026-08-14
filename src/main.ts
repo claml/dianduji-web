@@ -519,9 +519,24 @@ bookClose.addEventListener('click', () => {
 book.subscribe(() => void renderBook());
 
 async function startReview(): Promise<void> {
-  const words = await book.list();
-  if (words.length === 0) return;
-  reviewQueue = buildReviewQueue(words);
+  if (bookTab === 'words') {
+    const words = await book.list();
+    if (words.length === 0) return;
+    reviewQueue = buildReviewQueue(words);
+    reviewIndex = 0;
+    reviewOverlay.hidden = false;
+    showReviewCard();
+    return;
+  }
+  // Sentence/phrase review: show the text, reveal the translation.
+  const saved = await phrases.list();
+  if (saved.length === 0) return;
+  reviewQueue = saved.map((item) => ({
+    word: item.text,
+    phonetic: '',
+    definitionChinese: item.translation || '（未保存译文）',
+    mastered: false,
+  }));
   reviewIndex = 0;
   reviewOverlay.hidden = false;
   showReviewCard();
@@ -549,7 +564,9 @@ reviewReveal.addEventListener('click', () => {
 });
 reviewKnown.addEventListener('click', async () => {
   const card = reviewQueue[reviewIndex];
-  await book.setMastered(card.word, true);
+  if (bookTab === 'words') {
+    await book.setMastered(card.word, true);
+  }
   advanceReview();
 });
 reviewRetry.addEventListener('click', () => advanceReview());
@@ -610,6 +627,46 @@ applyTheme(localStorage.getItem(THEME_KEY) ?? 'system');
 applyReadingStyle();
 refreshChrome();
 showTxtMode(false);
+
+// Keyboard shortcuts: arrows page through PDFs, +/- zoom, Esc closes panels.
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    if (!settingsOverlay.hidden) settingsOverlay.hidden = true;
+    if (!customDefOverlay.hidden) customDefOverlay.hidden = true;
+    if (!reviewOverlay.hidden) reviewOverlay.hidden = true;
+    if (!outlinePanel.hidden) outlinePanel.hidden = true;
+    if (!bookPanel.hidden) bookPanel.hidden = true;
+    if (!wordCard.hidden) wordCard.hidden = true;
+    return;
+  }
+  const target = event.target as HTMLElement | null;
+  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+    return;
+  }
+  if (event.key === 'ArrowLeft') {
+    void (async () => {
+      await viewer.prev();
+      refreshChrome();
+      if (currentFileId) void reading.save(currentFileId, currentFileName, viewer.pageNum);
+    })();
+  } else if (event.key === 'ArrowRight') {
+    void (async () => {
+      await viewer.next();
+      refreshChrome();
+      if (currentFileId) void reading.save(currentFileId, currentFileName, viewer.pageNum);
+    })();
+  } else if (event.key === '+' || event.key === '=') {
+    void (async () => {
+      await viewer.setScale(viewer.scale + 0.2);
+      refreshChrome();
+    })();
+  } else if (event.key === '-') {
+    void (async () => {
+      await viewer.setScale(viewer.scale - 0.2);
+      refreshChrome();
+    })();
+  }
+});
 
 // Auto-open the bundled demo PDF so the page demos tap-to-look-up directly.
 void (async () => {
