@@ -13,6 +13,7 @@ export interface SavedWord {
   phonetic: string;
   definitionChinese: string;
   addedAt: number; // epoch millis
+  mastered?: boolean;
 }
 
 const EVENT = 'dianduji:vocabulary';
@@ -41,11 +42,24 @@ export class VocabularyBook {
     return (all as SavedWord[]).sort((a, b) => b.addedAt - a.addedAt);
   }
 
-  async contains(word: string): Promise<boolean> {
+  async setMastered(word: string, mastered: boolean): Promise<void> {
+    const existing = await this.lookup(word);
+    if (!existing) return;
+    await withStore(VOCABULARY_STORE, 'readwrite', (store) =>
+      store.put({ ...existing, mastered } as SavedWord),
+    );
+    this.events.dispatchEvent(new Event(EVENT));
+  }
+
+  private async lookup(word: string): Promise<SavedWord | null> {
     const hit = await withStore(VOCABULARY_STORE, 'readonly', (store) =>
       store.get(word),
     );
-    return hit != null;
+    return (hit as SavedWord | undefined) ?? null;
+  }
+
+  async contains(word: string): Promise<boolean> {
+    return (await this.lookup(word)) != null;
   }
 
   subscribe(listener: () => void): () => void {

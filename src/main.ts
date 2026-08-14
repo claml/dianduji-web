@@ -8,6 +8,8 @@ import {
   saveGatewayUrl,
 } from './online-translate';
 import { SpecializedDictionary, DOMAIN_LABELS } from './specialized';
+import { PhraseDictionary, PHRASE_TYPE_LABELS } from './phrase-dictionary';
+import { extractDocxText } from './docx-reader';
 import { CustomDefinitionStore } from './custom-definitions';
 import { VocabularyBook } from './vocabulary';
 import { PhraseStore } from './phrases';
@@ -32,6 +34,11 @@ const wordSpecDefinition = document.querySelector<HTMLElement>('#word-spec-defin
 const wordCustomDef = document.querySelector<HTMLElement>('#word-custom-def')!;
 const wordCustomDefText = document.querySelector<HTMLElement>('#word-custom-def-text')!;
 const customDefAdd = document.querySelector<HTMLButtonElement>('#custom-def-add')!;
+const wordPhrase = document.querySelector<HTMLElement>('#word-phrase')!;
+const wordPhraseType = document.querySelector<HTMLElement>('#word-phrase-type')!;
+const wordPhraseSurface = document.querySelector<HTMLElement>('#word-phrase-surface')!;
+const wordPhraseMeaning = document.querySelector<HTMLElement>('#word-phrase-meaning')!;
+const phraseSave = document.querySelector<HTMLButtonElement>('#phrase-save')!;
 const wordSentence = document.querySelector<HTMLElement>('#word-sentence')!;
 const wordSentenceText = document.querySelector<HTMLElement>('#word-sentence-text')!;
 const sentenceTranslate = document.querySelector<HTMLButtonElement>('#sentence-translate')!;
@@ -88,6 +95,7 @@ function applyTheme(theme: string): void {
 
 const dictionary = new WebDictionary(fetchChunkLoader());
 const specialized = new SpecializedDictionary();
+const phraseDict = new PhraseDictionary();
 const translator = new GatewayTranslator();
 const book = new VocabularyBook();
 const phrases = new PhraseStore();
@@ -99,6 +107,7 @@ const txtReader = new TxtReader(txtView, showWord);
 let currentWord = '';
 let currentEntry: { phonetic: string; definitionChinese: string } | null = null;
 let currentSentence = '';
+let currentPhrase: { key: string; surface: string; meaning: string } | null = null;
 let currentFileId: string | null = null;
 let currentFileName = '';
 let bookTab: 'words' | 'phrases' = 'words';
@@ -107,6 +116,7 @@ async function showWord(word: string, tokenIndex: number, sentence = ''): Promis
   currentWord = word;
   currentEntry = null;
   currentSentence = sentence;
+  currentPhrase = null;
   wordSurface.textContent = word;
   wordPhonetic.textContent = '';
   wordPos.textContent = '';
@@ -114,6 +124,7 @@ async function showWord(word: string, tokenIndex: number, sentence = ''): Promis
   wordSpecialized.hidden = true;
   wordCustomDef.hidden = true;
   customDefAdd.hidden = true;
+  wordPhrase.hidden = true;
   wordSentence.hidden = sentence.length === 0;
   wordSentenceText.textContent = sentence;
   sentenceTranslation.hidden = true;
@@ -126,6 +137,16 @@ async function showWord(word: string, tokenIndex: number, sentence = ''): Promis
   }
   wordCard.hidden = false;
   try {
+    // Related phrase around the tap (independent of dictionary hits).
+    const phrase = await phraseDict.lookupAround(activeTokens(), tokenIndex);
+    if (phrase != null) {
+      currentPhrase = phrase;
+      wordPhraseType.textContent = PHRASE_TYPE_LABELS[phrase.type] ?? phrase.type;
+      wordPhraseSurface.textContent = phrase.surface;
+      wordPhraseMeaning.textContent = phrase.meaning;
+      phraseSave.textContent = (await phrases.contains(phrase.surface)) ? '★ 已收藏' : '☆ 收藏短语';
+      wordPhrase.hidden = false;
+    }
     // Chain: general -> specialized -> custom -> online (mobile parity).
     const term = await specialized.lookupAround(activeTokens(), tokenIndex);
     const entry = term == null ? await dictionary.lookup(word) : null;
@@ -214,7 +235,7 @@ async function renderBook(): Promise<void> {
     bookEmpty.hidden = words.length > 0;
     for (const item of words) {
       const row = document.createElement('div');
-      row.className = 'book-item';
+      row.className = `book-item${item.mastered ? ' mastered' : ''}`;
       const surface = document.createElement('span');
       surface.className = 'bw';
       surface.textContent = item.word;
@@ -224,6 +245,15 @@ async function renderBook(): Promise<void> {
       const zh = document.createElement('span');
       zh.className = 'bw-zh';
       zh.textContent = item.definitionChinese.split('\n')[0] || '';
+      const check = document.createElement('button');
+      check.className = `bw-check${item.mastered ? ' on' : ''}`;
+      check.textContent = item.mastered ? '✓' : '○';
+      check.title = item.mastered ? '已掌握（点击取消）' : '标记为已掌握';
+      check.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        await book.setMastered(item.word, !item.mastered);
+        await renderBook();
+      });
       const del = document.createElement('button');
       del.className = 'bw-del';
       del.textContent = '×';
@@ -233,7 +263,7 @@ async function renderBook(): Promise<void> {
         await book.remove(item.word);
         await renderBook();
       });
-      row.append(surface, phonetic, zh, del);
+      row.append(surface, phonetic, zh, check, del);
       row.addEventListener('click', () => void showWord(item.word, 0));
       bookList.appendChild(row);
     }
@@ -309,9 +339,15 @@ function showTxtMode(on: boolean): void {
 }
 
 async function openFile(file: File): Promise<void> {
-  if (file.name.toLowerCase().endsWith('.txt')) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.txt') || name.endsWith('.docx')) {
     showTxtMode(true);
-    await txtReader.open(file);
+    if (name.endsWith('.docx')) {
+      const text = await extractDocxText(await file.arrayBuffer());
+      await txtReader.open(new File([text], file.name, { type: 'text/plain' }));
+    } else {
+      await txtReader.open(file);
+    }
     currentFileName = file.name;
     currentFileId = documentId(file.name, file.size);
     const state = await reading.load(currentFileId);
@@ -410,6 +446,16 @@ sentenceSave.addEventListener('click', async () => {
   } else {
     await phrases.add(currentSentence, '');
     sentenceSave.textContent = '★ 已收藏';
+  }
+});
+phraseSave.addEventListener('click', async () => {
+  if (!currentPhrase) return;
+  const saved = await phrases.contains(currentPhrase.surface);
+  if (saved) {
+    phraseSave.textContent = '☆ 收藏短语';
+  } else {
+    await phrases.add(currentPhrase.surface, currentPhrase.meaning);
+    phraseSave.textContent = '★ 已收藏';
   }
 });
 customDefAdd.addEventListener('click', () => {

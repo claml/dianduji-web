@@ -10,7 +10,7 @@
     <header id="toolbar">
       <span class="brand">典读鸡 <small>Web</small></span>
       <button id="open-btn" title="打开 PDF">打开 PDF</button>
-      <input id="file-input" type="file" accept="application/pdf,.pdf" hidden />
+      <input id="file-input" type="file" accept="application/pdf,.pdf,text/plain,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx" hidden />
       <span class="spacer"></span>
       <button id="zoom-out" title="缩小">−</button>
       <span id="zoom-label">100%</span>
@@ -60,6 +60,15 @@
             <button id="sentence-save" title="收藏到句子本">☆ 收藏句子</button>
           </div>
           <div id="sentence-translation" class="ws-translation" hidden></div>
+        </div>
+        <div id="word-phrase" hidden>
+          <div class="phrase-row">
+            <span class="ws-label">相关短语</span>
+            <span id="word-phrase-type"></span>
+          </div>
+          <div id="word-phrase-surface"></div>
+          <div id="word-phrase-meaning"></div>
+          <button id="phrase-save">☆ 收藏短语</button>
         </div>
         <button id="custom-def-add" hidden>＋ 添加自定义释义</button>
         <div id="word-source" class="hint"></div>

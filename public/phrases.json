@@ -1,0 +1,22 @@
+[
+  {"key":"look-up","words":["look","up"],"type":"phrasalVerb","meaning":"查阅；抬头看","confidence":0.98},
+  {"key":"give-up","words":["give","up"],"type":"phrasalVerb","meaning":"放弃","confidence":0.99},
+  {"key":"find-out","words":["find","out"],"type":"phrasalVerb","meaning":"查明；发现","confidence":0.98},
+  {"key":"carry-on","words":["carry","on"],"type":"phrasalVerb","meaning":"继续","confidence":0.96},
+  {"key":"work-out","words":["work","out"],"type":"phrasalVerb","meaning":"解决；锻炼","confidence":0.95},
+  {"key":"take-off","words":["take","off"],"type":"phrasalVerb","meaning":"脱下；起飞","confidence":0.96},
+  {"key":"in-addition-to","words":["in","addition","to"],"type":"prepositionalPhrase","meaning":"除……之外（还）","confidence":0.99},
+  {"key":"in-front-of","words":["in","front","of"],"type":"prepositionalPhrase","meaning":"在……前面","confidence":0.99},
+  {"key":"according-to","words":["according","to"],"type":"prepositionalPhrase","meaning":"根据","confidence":0.99},
+  {"key":"because-of","words":["because","of"],"type":"prepositionalPhrase","meaning":"因为","confidence":0.99},
+  {"key":"instead-of","words":["instead","of"],"type":"prepositionalPhrase","meaning":"代替；而不是","confidence":0.99},
+  {"key":"take-advantage-of","words":["take","advantage","of"],"type":"collocation","meaning":"利用","confidence":0.99},
+  {"key":"make-a-difference","words":["make","a","difference"],"type":"collocation","meaning":"产生影响","confidence":0.98},
+  {"key":"pay-attention-to","words":["pay","attention","to"],"type":"collocation","meaning":"注意","confidence":0.99},
+  {"key":"as-a-result","words":["as","a","result"],"type":"collocation","meaning":"因此；结果","confidence":0.98},
+  {"key":"piece-of-cake","words":["piece","of","cake"],"type":"idiom","meaning":"轻而易举的事","confidence":0.98},
+  {"key":"break-the-ice","words":["break","the","ice"],"type":"idiom","meaning":"打破僵局","confidence":0.97},
+  {"key":"once-in-a-blue-moon","words":["once","in","a","blue","moon"],"type":"idiom","meaning":"千载难逢；极少","confidence":0.99},
+  {"key":"under-the-weather","words":["under","the","weather"],"type":"idiom","meaning":"身体不适","confidence":0.96},
+  {"key":"hit-the-nail-on-the-head","words":["hit","the","nail","on","the","head"],"type":"idiom","meaning":"一针见血","confidence":0.99}
+]
