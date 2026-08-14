@@ -479,6 +479,31 @@ canvas { display: block; box-shadow: 0 2px 14px rgb(0 0 0 / 0.18); background: #
 }
 #settings-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+#sync-section {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#sync-section h4 { margin: 0; font-size: 14px; }
+#sync-section input[type='text'],
+#sync-section input[type='password'] {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+}
+#sync-actions { display: flex; gap: 8px; }
+#sync-actions button { flex: 1; }
+.sync-user { font-size: 13px; font-weight: 600; }
+
 @media (max-width: 640px) {
   #toolbar { flex-wrap: wrap; row-gap: 4px; }
   #viewer { padding: 12px; }

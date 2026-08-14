@@ -14,6 +14,9 @@ import { CustomDefinitionStore } from './custom-definitions';
 import { VocabularyBook } from './vocabulary';
 import { PhraseStore } from './phrases';
 import { documentId, ReadingStore } from './reading-state';
+import { WebSyncData } from './sync-data';
+import { WebSyncEngine } from './sync-engine';
+import { SyncError } from './sync';
 import { buildReviewQueue } from './review';
 import type { ReviewCard } from './review';
 import type { SpecializedTerm } from './specialized';
@@ -92,6 +95,16 @@ const reviewNext = document.querySelector<HTMLButtonElement>('#review-next')!;
 const reviewClose = document.querySelector<HTMLButtonElement>('#review-close')!;
 const fontSizeSelect = document.querySelector<HTMLSelectElement>('#font-size-select')!;
 const lineHeightSelect = document.querySelector<HTMLSelectElement>('#line-height-select')!;
+const syncUsername = document.querySelector<HTMLInputElement>('#sync-username')!;
+const syncPassword = document.querySelector<HTMLInputElement>('#sync-password')!;
+const syncLoggedOut = document.querySelector<HTMLElement>('#sync-logged-out')!;
+const syncLoggedIn = document.querySelector<HTMLElement>('#sync-logged-in')!;
+const syncUserLabel = document.querySelector<HTMLElement>('#sync-user-label')!;
+const syncLogin = document.querySelector<HTMLButtonElement>('#sync-login')!;
+const syncRegister = document.querySelector<HTMLButtonElement>('#sync-register')!;
+const syncNow = document.querySelector<HTMLButtonElement>('#sync-now')!;
+const syncLogout = document.querySelector<HTMLButtonElement>('#sync-logout')!;
+const syncStatus = document.querySelector<HTMLElement>('#sync-status')!;
 
 const ONLINE_KEY = 'dianduji.onlineEnabled';
 const THEME_KEY = 'dianduji.theme';
@@ -116,6 +129,11 @@ const book = new VocabularyBook();
 const phrases = new PhraseStore();
 const customDefs = new CustomDefinitionStore();
 const reading = new ReadingStore();
+const syncData = new WebSyncData(book, phrases, customDefs, reading);
+const syncEngine = new WebSyncEngine(
+  () => syncData.collect(),
+  (data, updatedAt) => syncData.apply(data, updatedAt),
+);
 const viewer = new PdfViewer(canvas, textLayer, showWord);
 const txtReader = new TxtReader(txtView, showWord);
 
@@ -622,6 +640,74 @@ settingsSave.addEventListener('click', () => {
 settingsCancel.addEventListener('click', () => {
   settingsOverlay.hidden = true;
 });
+
+function syncUiMessage(error: unknown): string {
+  if (error instanceof SyncError) {
+    switch (error.failure) {
+      case 'offline':
+        return '网络不可用（网关未运行？请检查地址）';
+      case 'invalidCredentials':
+        return '用户名或密码错误';
+      case 'usernameTaken':
+        return '用户名已被注册';
+      case 'rejected':
+        return '登录已过期，请重新登录';
+      case 'badResponse':
+        return '服务器响应异常，请稍后重试';
+    }
+  }
+  return String(error);
+}
+
+function refreshSyncUi(): void {
+  const loggedIn = syncEngine.isLoggedIn;
+  syncLoggedOut.hidden = loggedIn;
+  syncLoggedIn.hidden = !loggedIn;
+  if (loggedIn && syncEngine.user) {
+    syncUserLabel.textContent = `已登录：${syncEngine.user.username}`;
+  }
+}
+
+async function runAuth(action: () => Promise<void>): Promise<void> {
+  syncStatus.textContent = '处理中…';
+  try {
+    await action();
+    syncStatus.textContent = '成功';
+    syncPassword.value = '';
+    refreshSyncUi();
+  } catch (error) {
+    syncStatus.textContent = syncUiMessage(error);
+  }
+}
+
+syncLogin.addEventListener('click', () =>
+  runAuth(() => syncEngine.login(syncUsername.value.trim(), syncPassword.value)),
+);
+syncRegister.addEventListener('click', () =>
+  runAuth(() => syncEngine.register(syncUsername.value.trim(), syncPassword.value)),
+);
+syncNow.addEventListener('click', async () => {
+  syncStatus.textContent = '同步中…';
+  try {
+    const outcome = await syncEngine.syncNow();
+    syncStatus.textContent = outcome.pushedLocal
+      ? '已推送本地数据'
+      : '已应用云端数据';
+    await renderBook();
+    applyReadingStyle();
+    applyTheme(localStorage.getItem(THEME_KEY) ?? 'system');
+  } catch (error) {
+    syncStatus.textContent = syncUiMessage(error);
+    refreshSyncUi();
+  }
+});
+syncLogout.addEventListener('click', async () => {
+  await syncEngine.logout();
+  syncStatus.textContent = '已退出登录';
+  refreshSyncUi();
+});
+
+refreshSyncUi();
 
 applyTheme(localStorage.getItem(THEME_KEY) ?? 'system');
 applyReadingStyle();

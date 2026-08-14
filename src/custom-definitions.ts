@@ -33,6 +33,13 @@ export class CustomDefinitionStore {
     return (hit as CustomDefinition | undefined) ?? null;
   }
 
+  async list(): Promise<CustomDefinition[]> {
+    const all = await withStore(CUSTOM_DEFS_STORE, 'readonly', (store) =>
+      store.getAll(),
+    );
+    return (all as CustomDefinition[]).sort((a, b) => b.createdAt - a.createdAt);
+  }
+
   async remove(word: string): Promise<void> {
     await withStore(CUSTOM_DEFS_STORE, 'readwrite', (store) =>
       store.delete(word.toLowerCase()),
