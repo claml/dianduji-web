@@ -19,6 +19,9 @@
       <button id="prev-page" title="上一页">‹</button>
       <span id="page-label">– / –</span>
       <button id="next-page" title="下一页">›</button>
+      <span class="sep"></span>
+      <button id="book-btn" title="生词本">生词本</button>
+      <button id="settings-btn" title="设置">⚙</button>
     </header>
 
     <main id="viewer">
@@ -34,12 +37,40 @@
         <div id="word-card-head">
           <span id="word-surface"></span>
           <span id="word-pos"></span>
+          <button id="word-save" title="收藏到生词本">☆</button>
           <button id="word-close" title="关闭">×</button>
         </div>
         <div id="word-phonetic"></div>
         <div id="word-meaning"></div>
         <div id="word-source" class="hint"></div>
       </aside>
+
+      <aside id="book-panel" hidden>
+        <div id="book-head">
+          <span>生词本</span>
+          <button id="book-close" title="关闭">×</button>
+        </div>
+        <div id="book-list"></div>
+        <div id="book-empty" class="hint">还没有收藏的单词</div>
+      </aside>
+
+      <div id="settings-overlay" hidden>
+        <div id="settings-box">
+          <h3>设置</h3>
+          <label>
+            在线翻译网关地址
+            <input id="gateway-url" type="text" placeholder="http://127.0.0.1:8080/translate" />
+          </label>
+          <label class="row">
+            <input id="online-enabled" type="checkbox" />
+            词库未收录时尝试在线翻译
+          </label>
+          <div id="settings-actions">
+            <button id="settings-save">保存</button>
+            <button id="settings-cancel">取消</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script type="module" src="/src/main.ts"></script>
