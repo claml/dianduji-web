@@ -33,6 +33,12 @@ node scripts/make-demo-pdf.mjs   # 重新生成演示 PDF
 
 详细规划见移动端仓库 `.planning/2026-08-17-web-edition-plan.md`（本地私有）。
 
+## 部署（GitHub Pages）
+
+CI 已含 `deploy` job（main 分支构建后发布）。首次需在仓库
+**Settings → Pages → Source** 选择 **GitHub Actions** 启用一次，
+之后每次 push 自动部署。
+
 ## 许可
 
 MIT（见 `LICENSE`）。ECDICT 词库（M2 引入）为 MIT 许可。
