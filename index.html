@@ -94,7 +94,26 @@
         </div>
         <div id="book-list"></div>
         <div id="book-empty" class="hint">还没有收藏的内容</div>
+        <div id="book-footer">
+          <button id="review-btn" title="复习生词">复习</button>
+        </div>
       </aside>
+
+      <div id="review-overlay" hidden>
+        <div id="review-box">
+          <div id="review-progress"></div>
+          <div id="review-word"></div>
+          <div id="review-phonetic"></div>
+          <div id="review-definition" hidden></div>
+          <div id="review-actions">
+            <button id="review-reveal">显示释义</button>
+            <button id="review-known" hidden>✓ 认识（标记已掌握）</button>
+            <button id="review-retry" hidden>再学一次</button>
+            <button id="review-next" hidden>下一个 ›</button>
+          </div>
+          <button id="review-close" title="退出复习">×</button>
+        </div>
+      </div>
 
       <div id="settings-overlay" hidden>
         <div id="settings-box">
@@ -113,6 +132,23 @@
               <option value="system">跟随系统</option>
               <option value="light">日间</option>
               <option value="dark">夜间</option>
+            </select>
+          </label>
+          <label>
+            阅读字号（TXT/DOCX）
+            <select id="font-size-select">
+              <option value="15">小</option>
+              <option value="17">标准</option>
+              <option value="20">大</option>
+              <option value="24">特大</option>
+            </select>
+          </label>
+          <label>
+            行距
+            <select id="line-height-select">
+              <option value="1.6">紧凑</option>
+              <option value="1.9">标准</option>
+              <option value="2.2">宽松</option>
             </select>
           </label>
           <div id="settings-actions">

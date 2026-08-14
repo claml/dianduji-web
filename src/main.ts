@@ -14,6 +14,8 @@ import { CustomDefinitionStore } from './custom-definitions';
 import { VocabularyBook } from './vocabulary';
 import { PhraseStore } from './phrases';
 import { documentId, ReadingStore } from './reading-state';
+import { buildReviewQueue } from './review';
+import type { ReviewCard } from './review';
 import type { SpecializedTerm } from './specialized';
 
 const fileInput = document.querySelector<HTMLInputElement>('#file-input')!;
@@ -77,6 +79,19 @@ const customDefWord = document.querySelector<HTMLElement>('#custom-def-word')!;
 const customDefInput = document.querySelector<HTMLTextAreaElement>('#custom-def-input')!;
 const customDefSave = document.querySelector<HTMLButtonElement>('#custom-def-save')!;
 const customDefCancel = document.querySelector<HTMLButtonElement>('#custom-def-cancel')!;
+const reviewBtn = document.querySelector<HTMLButtonElement>('#review-btn')!;
+const reviewOverlay = document.querySelector<HTMLElement>('#review-overlay')!;
+const reviewProgress = document.querySelector<HTMLElement>('#review-progress')!;
+const reviewWord = document.querySelector<HTMLElement>('#review-word')!;
+const reviewPhonetic = document.querySelector<HTMLElement>('#review-phonetic')!;
+const reviewDefinition = document.querySelector<HTMLElement>('#review-definition')!;
+const reviewReveal = document.querySelector<HTMLButtonElement>('#review-reveal')!;
+const reviewKnown = document.querySelector<HTMLButtonElement>('#review-known')!;
+const reviewRetry = document.querySelector<HTMLButtonElement>('#review-retry')!;
+const reviewNext = document.querySelector<HTMLButtonElement>('#review-next')!;
+const reviewClose = document.querySelector<HTMLButtonElement>('#review-close')!;
+const fontSizeSelect = document.querySelector<HTMLSelectElement>('#font-size-select')!;
+const lineHeightSelect = document.querySelector<HTMLSelectElement>('#line-height-select')!;
 
 const ONLINE_KEY = 'dianduji.onlineEnabled';
 const THEME_KEY = 'dianduji.theme';
@@ -111,6 +126,18 @@ let currentPhrase: { key: string; surface: string; meaning: string } | null = nu
 let currentFileId: string | null = null;
 let currentFileName = '';
 let bookTab: 'words' | 'phrases' = 'words';
+let reviewQueue: ReviewCard[] = [];
+let reviewIndex = 0;
+
+const FONT_KEY = 'dianduji.fontSize';
+const LINE_KEY = 'dianduji.lineHeight';
+
+function applyReadingStyle(): void {
+  const fontSize = localStorage.getItem(FONT_KEY) ?? '17';
+  const lineHeight = localStorage.getItem(LINE_KEY) ?? '1.9';
+  txtView.style.fontSize = `${fontSize}px`;
+  txtView.style.lineHeight = lineHeight;
+}
 
 async function showWord(word: string, tokenIndex: number, sentence = ''): Promise<void> {
   currentWord = word;
@@ -490,6 +517,56 @@ bookClose.addEventListener('click', () => {
   bookPanel.hidden = true;
 });
 book.subscribe(() => void renderBook());
+
+async function startReview(): Promise<void> {
+  const words = await book.list();
+  if (words.length === 0) return;
+  reviewQueue = buildReviewQueue(words);
+  reviewIndex = 0;
+  reviewOverlay.hidden = false;
+  showReviewCard();
+}
+
+function showReviewCard(): void {
+  const card = reviewQueue[reviewIndex];
+  reviewProgress.textContent = `${reviewIndex + 1} / ${reviewQueue.length}`;
+  reviewWord.textContent = card.word;
+  reviewPhonetic.textContent = card.phonetic ? `/${card.phonetic}/` : '';
+  reviewDefinition.hidden = true;
+  reviewDefinition.textContent = card.definitionChinese;
+  reviewReveal.hidden = false;
+  reviewKnown.hidden = true;
+  reviewRetry.hidden = true;
+  reviewNext.hidden = true;
+}
+
+reviewBtn.addEventListener('click', () => void startReview());
+reviewReveal.addEventListener('click', () => {
+  reviewDefinition.hidden = false;
+  reviewReveal.hidden = true;
+  reviewKnown.hidden = false;
+  reviewRetry.hidden = false;
+});
+reviewKnown.addEventListener('click', async () => {
+  const card = reviewQueue[reviewIndex];
+  await book.setMastered(card.word, true);
+  advanceReview();
+});
+reviewRetry.addEventListener('click', () => advanceReview());
+reviewNext.addEventListener('click', () => advanceReview());
+reviewClose.addEventListener('click', () => {
+  reviewOverlay.hidden = true;
+});
+
+function advanceReview(): void {
+  reviewIndex++;
+  if (reviewIndex >= reviewQueue.length) {
+    reviewOverlay.hidden = true;
+    void renderBook();
+    return;
+  }
+  showReviewCard();
+}
 tabWords.addEventListener('click', () => {
   bookTab = 'words';
   tabWords.classList.add('active');
@@ -507,6 +584,8 @@ settingsBtn.addEventListener('click', () => {
   gatewayUrlInput.value = loadGatewayUrl();
   onlineEnabledInput.checked = onlineEnabled();
   themeSelect.value = localStorage.getItem(THEME_KEY) ?? 'system';
+  fontSizeSelect.value = localStorage.getItem(FONT_KEY) ?? '17';
+  lineHeightSelect.value = localStorage.getItem(LINE_KEY) ?? '1.9';
   settingsOverlay.hidden = false;
 });
 settingsSave.addEventListener('click', () => {
@@ -514,10 +593,13 @@ settingsSave.addEventListener('click', () => {
   try {
     localStorage.setItem(ONLINE_KEY, String(onlineEnabledInput.checked));
     localStorage.setItem(THEME_KEY, themeSelect.value);
+    localStorage.setItem(FONT_KEY, fontSizeSelect.value);
+    localStorage.setItem(LINE_KEY, lineHeightSelect.value);
   } catch {
     // storage unavailable; keep defaults
   }
   applyTheme(themeSelect.value);
+  applyReadingStyle();
   settingsOverlay.hidden = true;
 });
 settingsCancel.addEventListener('click', () => {
@@ -525,6 +607,7 @@ settingsCancel.addEventListener('click', () => {
 });
 
 applyTheme(localStorage.getItem(THEME_KEY) ?? 'system');
+applyReadingStyle();
 refreshChrome();
 showTxtMode(false);
 
