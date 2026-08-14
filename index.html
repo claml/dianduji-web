@@ -17,9 +17,10 @@
       <button id="zoom-in" title="放大">＋</button>
       <span class="sep"></span>
       <button id="prev-page" title="上一页">‹</button>
-      <span id="page-label">– / –</span>
+      <input id="page-input" title="页码：输入数字跳转" inputmode="numeric" />
       <button id="next-page" title="下一页">›</button>
       <span class="sep"></span>
+      <button id="outline-btn" title="目录" hidden>目录</button>
       <button id="book-btn" title="生词本">生词本</button>
       <button id="settings-btn" title="设置">⚙</button>
     </header>
@@ -42,7 +43,20 @@
         </div>
         <div id="word-phonetic"></div>
         <div id="word-meaning"></div>
+        <div id="word-specialized" hidden>
+          <span id="word-spec-domain"></span>
+          <span id="word-spec-definition"></span>
+        </div>
         <div id="word-source" class="hint"></div>
+      </aside>
+
+      <aside id="outline-panel" hidden>
+        <div id="outline-head">
+          <span>目录</span>
+          <button id="outline-close" title="关闭">×</button>
+        </div>
+        <div id="outline-list"></div>
+        <div id="outline-empty" class="hint">此 PDF 没有书签目录</div>
       </aside>
 
       <aside id="book-panel" hidden>

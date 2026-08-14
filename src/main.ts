@@ -6,7 +6,10 @@ import {
   loadGatewayUrl,
   saveGatewayUrl,
 } from './online-translate';
+import { SpecializedDictionary, DOMAIN_LABELS } from './specialized';
 import { VocabularyBook } from './vocabulary';
+import { documentId, ReadingStore } from './reading-state';
+import type { SpecializedTerm } from './specialized';
 
 const fileInput = document.querySelector<HTMLInputElement>('#file-input')!;
 const openBtn = document.querySelector<HTMLButtonElement>('#open-btn')!;
@@ -18,15 +21,23 @@ const wordSurface = document.querySelector<HTMLElement>('#word-surface')!;
 const wordPhonetic = document.querySelector<HTMLElement>('#word-phonetic')!;
 const wordPos = document.querySelector<HTMLElement>('#word-pos')!;
 const wordMeaning = document.querySelector<HTMLElement>('#word-meaning')!;
+const wordSpecialized = document.querySelector<HTMLElement>('#word-specialized')!;
+const wordSpecDomain = document.querySelector<HTMLElement>('#word-spec-domain')!;
+const wordSpecDefinition = document.querySelector<HTMLElement>('#word-spec-definition')!;
 const wordSource = document.querySelector<HTMLElement>('#word-source')!;
 const wordSave = document.querySelector<HTMLButtonElement>('#word-save')!;
 const wordClose = document.querySelector<HTMLButtonElement>('#word-close')!;
 const prevBtn = document.querySelector<HTMLButtonElement>('#prev-page')!;
 const nextBtn = document.querySelector<HTMLButtonElement>('#next-page')!;
+const pageInput = document.querySelector<HTMLInputElement>('#page-input')!;
 const zoomInBtn = document.querySelector<HTMLButtonElement>('#zoom-in')!;
 const zoomOutBtn = document.querySelector<HTMLButtonElement>('#zoom-out')!;
-const pageLabel = document.querySelector<HTMLElement>('#page-label')!;
 const zoomLabel = document.querySelector<HTMLElement>('#zoom-label')!;
+const outlineBtn = document.querySelector<HTMLButtonElement>('#outline-btn')!;
+const outlinePanel = document.querySelector<HTMLElement>('#outline-panel')!;
+const outlineClose = document.querySelector<HTMLButtonElement>('#outline-close')!;
+const outlineList = document.querySelector<HTMLElement>('#outline-list')!;
+const outlineEmpty = document.querySelector<HTMLElement>('#outline-empty')!;
 const bookBtn = document.querySelector<HTMLButtonElement>('#book-btn')!;
 const bookPanel = document.querySelector<HTMLElement>('#book-panel')!;
 const bookClose = document.querySelector<HTMLButtonElement>('#book-close')!;
@@ -50,26 +61,40 @@ function onlineEnabled(): boolean {
 }
 
 const dictionary = new WebDictionary(fetchChunkLoader());
+const specialized = new SpecializedDictionary();
 const translator = new GatewayTranslator();
 const book = new VocabularyBook();
+const reading = new ReadingStore();
 const viewer = new PdfViewer(canvas, textLayer, showWord);
 
 let currentWord = '';
 let currentEntry: { phonetic: string; definitionChinese: string } | null = null;
+let currentFileId: string | null = null;
 
-async function showWord(word: string): Promise<void> {
+async function showWord(word: string, tokenIndex: number): Promise<void> {
   currentWord = word;
   currentEntry = null;
   wordSurface.textContent = word;
   wordPhonetic.textContent = '';
   wordPos.textContent = '';
   wordMeaning.textContent = '查询中…';
+  wordSpecialized.hidden = true;
   wordSource.textContent = 'ECDICT 词库';
-  wordSave.textContent = (await book.contains(word)) ? '★' : '☆';
+  try {
+    wordSave.textContent = (await book.contains(word)) ? '★' : '☆';
+  } catch {
+    wordSave.textContent = '☆';
+  }
   wordCard.hidden = false;
   try {
-    const entry = await dictionary.lookup(word);
-    if (!entry) {
+    // Multi-word specialized terms win over single-word lookups.
+    const term = await specialized.lookupAround(viewer.tokens, tokenIndex);
+    const entry = term == null ? await dictionary.lookup(word) : null;
+    if (term != null && entry == null) {
+      showSpecialized(term, word);
+      return;
+    }
+    if (entry == null) {
       await showOnlineFallback(word);
       return;
     }
@@ -82,10 +107,24 @@ async function showWord(word: string): Promise<void> {
       .filter(Boolean);
     wordMeaning.textContent = lines.join('\n') || '（无释义）';
     wordSource.textContent = 'ECDICT 词库（MIT）';
+    if (term != null) showSpecialized(term, entry.word);
   } catch {
     wordMeaning.textContent = '词典加载失败，请检查网络后重试';
     wordSource.textContent = '';
   }
+}
+
+function showSpecialized(term: SpecializedTerm, surface: string): void {
+  if (term.term.toLowerCase() !== surface.toLowerCase()) {
+    wordSurface.textContent = `${surface} · ${term.term}`;
+  }
+  wordSpecDomain.textContent = DOMAIN_LABELS[term.domain] ?? term.domain;
+  wordSpecDefinition.textContent = term.definition;
+  wordSpecialized.hidden = false;
+  if (wordMeaning.textContent === '查询中…') {
+    wordMeaning.textContent = '（专业术语，无通用释义）';
+  }
+  wordSource.textContent = '专业词典（5 领域 1065 条）';
 }
 
 async function showOnlineFallback(word: string): Promise<void> {
@@ -136,13 +175,47 @@ async function renderBook(): Promise<void> {
       await renderBook();
     });
     row.append(surface, phonetic, zh, del);
-    row.addEventListener('click', () => void showWord(item.word));
+    row.addEventListener('click', () => void showWord(item.word, 0));
     bookList.appendChild(row);
   }
 }
 
+async function renderOutline(): Promise<void> {
+  const outline = await viewer.getOutline();
+  outlineEmpty.hidden = outline != null && outline.length > 0;
+  outlineList.replaceChildren();
+  if (!outline) return;
+  for (const item of outline) {
+    if (item.dest == null && item.url != null) continue;
+    const row = document.createElement('div');
+    row.className = 'outline-item';
+    row.textContent = item.title;
+    const page = document.createElement('span');
+    page.className = 'oi-page';
+    page.textContent = `→ ${item.pageNumber ?? '?'}`;
+    row.appendChild(page);
+    const pageNumber = item.pageNumber;
+    row.addEventListener('click', () => {
+      if (pageNumber != null) void gotoPage(pageNumber);
+      outlinePanel.hidden = true;
+    });
+    outlineList.appendChild(row);
+  }
+}
+
+async function gotoPage(page: number): Promise<void> {
+  await viewer.goto(page);
+  refreshChrome();
+  if (currentFileId) void reading.save(currentFileId, fileName(), viewer.pageNum);
+}
+
+function fileName(): string {
+  return currentFileName;
+}
+
+let currentFileName = '';
 function refreshChrome(): void {
-  pageLabel.textContent = `${viewer.pageNum} / ${viewer.pageCount}`;
+  pageInput.value = viewer.pageNum > 0 ? `${viewer.pageNum} / ${viewer.pageCount}` : '– / –';
   zoomLabel.textContent = `${Math.round(viewer.scale * 100)}%`;
   prevBtn.disabled = !viewer.hasDocument || viewer.pageNum <= 1;
   nextBtn.disabled = !viewer.hasDocument || viewer.pageNum >= viewer.pageCount;
@@ -155,21 +228,38 @@ fileInput.addEventListener('change', async () => {
   if (!file) return;
   try {
     await viewer.open(file);
+    currentFileName = file.name;
+    const id = documentId(file.name, file.size);
+    currentFileId = id;
+    const state = await reading.load(id);
+    if (state && state.page > 1) {
+      await viewer.goto(state.page);
+    }
   } catch (error) {
     console.error(error);
     wordMeaning.textContent = 'PDF 打开失败';
     wordCard.hidden = false;
   }
   refreshChrome();
+  outlineBtn.hidden = !viewer.hasDocument;
 });
 
 prevBtn.addEventListener('click', async () => {
   await viewer.prev();
   refreshChrome();
+  if (currentFileId) void reading.save(currentFileId, fileName(), viewer.pageNum);
 });
 nextBtn.addEventListener('click', async () => {
   await viewer.next();
   refreshChrome();
+  if (currentFileId) void reading.save(currentFileId, fileName(), viewer.pageNum);
+});
+pageInput.addEventListener('keydown', async (event) => {
+  if (event.key !== 'Enter') return;
+  const target = Number(pageInput.value.replace(/[^0-9]/g, ''));
+  if (Number.isFinite(target) && target > 0) {
+    await gotoPage(target);
+  }
 });
 zoomInBtn.addEventListener('click', async () => {
   await viewer.setScale(viewer.scale + 0.2);
@@ -197,6 +287,14 @@ wordSave.addEventListener('click', async () => {
     });
     wordSave.textContent = '★';
   }
+});
+
+outlineBtn.addEventListener('click', () => {
+  outlinePanel.hidden = !outlinePanel.hidden;
+  if (!outlinePanel.hidden) void renderOutline();
+});
+outlineClose.addEventListener('click', () => {
+  outlinePanel.hidden = true;
 });
 
 bookBtn.addEventListener('click', () => {
@@ -236,8 +334,15 @@ void (async () => {
     const file = new File([await response.blob()], 'demo.pdf', {
       type: 'application/pdf',
     });
+    currentFileName = file.name;
     await viewer.open(file);
+    currentFileId = documentId(file.name, file.size);
+    const state = await reading.load(currentFileId);
+    if (state && state.page > 1) {
+      await viewer.goto(state.page);
+    }
     refreshChrome();
+    outlineBtn.hidden = false;
   } catch {
     // Demo asset missing; the open button still works.
   }

@@ -13,13 +13,25 @@ interface TextRunLike {
   height: number;
 }
 
-export type WordTapHandler = (word: string) => void;
+export type WordTapHandler = (word: string, tokenIndex: number) => void;
+
+/** Structural view of a pdf.js outline item. */
+export interface OutlineLike {
+  title: string;
+  pageNumber?: number | null;
+  dest?: unknown;
+  url?: string | null;
+}
 
 export class PdfViewer {
   private doc: PDFDocumentProxy | null = null;
   private renderTask: pdfjsLib.RenderTask | null = null;
+  private outline: OutlineLike[] | null = null;
   pageNum = 1;
   scale = 1.2;
+
+  /** Tokens of the rendered page in visual order (one per clickable span). */
+  private pageTokens: string[] = [];
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -35,10 +47,23 @@ export class PdfViewer {
     return this.doc != null;
   }
 
+  get tokens(): string[] {
+    return this.pageTokens;
+  }
+
+  async getOutline(): Promise<OutlineLike[] | null> {
+    if (!this.doc) return null;
+    if (this.outline == null) {
+      this.outline = (await this.doc.getOutline()) as OutlineLike[] | null;
+    }
+    return this.outline;
+  }
+
   async open(file: File): Promise<void> {
     this.doc?.destroy();
     const data = await file.arrayBuffer();
     this.doc = await pdfjsLib.getDocument({ data }).promise;
+    this.outline = null;
     this.pageNum = 1;
     await this.render();
   }
@@ -99,6 +124,8 @@ export class PdfViewer {
       .filter((item) => 'str' in item)
       .map((item) => item as unknown as TextRunLike);
 
+    this.pageTokens = [];
+    let tokenIndex = 0;
     for (const item of items) {
       const tokens = tokenizeItem(item.str);
       if (tokens.length === 0) continue;
@@ -117,11 +144,14 @@ export class PdfViewer {
         span.style.top = `${baseTop}px`;
         span.style.fontSize = `${fontSizePx}px`;
         span.style.transform = `matrix(${tx[0]}, ${tx[1]}, ${tx[2]}, ${tx[3]}, 0, 0)`;
+        const index = tokenIndex;
         span.addEventListener('click', () => {
           span.classList.add('hit');
-          this.onWordTap(token.text);
+          this.onWordTap(token.text, index);
         });
         this.textLayer.appendChild(span);
+        this.pageTokens.push(token.text);
+        tokenIndex++;
       }
     }
   }

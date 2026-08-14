@@ -6,6 +6,8 @@
  * UI refresh the list without polling.
  */
 
+import { VOCABULARY_STORE, withStore } from './idb';
+
 export interface SavedWord {
   word: string;
   phonetic: string;
@@ -13,36 +15,7 @@ export interface SavedWord {
   addedAt: number; // epoch millis
 }
 
-const DB_NAME = 'dianduji';
-const STORE = 'vocabulary';
 const EVENT = 'dianduji:vocabulary';
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'word' });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function withStore<T>(
-  mode: IDBTransactionMode,
-  fn: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
-  const db = await openDb();
-  return new Promise<T>((resolve, reject) => {
-    const transaction = db.transaction(STORE, mode);
-    const request = fn(transaction.objectStore(STORE));
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
 
 export class VocabularyBook {
   private readonly events: EventTarget;
@@ -52,22 +25,26 @@ export class VocabularyBook {
   }
 
   async add(entry: SavedWord): Promise<void> {
-    await withStore('readwrite', (store) => store.put(entry));
+    await withStore(VOCABULARY_STORE, 'readwrite', (store) => store.put(entry));
     this.events.dispatchEvent(new Event(EVENT));
   }
 
   async remove(word: string): Promise<void> {
-    await withStore('readwrite', (store) => store.delete(word));
+    await withStore(VOCABULARY_STORE, 'readwrite', (store) => store.delete(word));
     this.events.dispatchEvent(new Event(EVENT));
   }
 
   async list(): Promise<SavedWord[]> {
-    const all = await withStore('readonly', (store) => store.getAll());
+    const all = await withStore(VOCABULARY_STORE, 'readonly', (store) =>
+      store.getAll(),
+    );
     return (all as SavedWord[]).sort((a, b) => b.addedAt - a.addedAt);
   }
 
   async contains(word: string): Promise<boolean> {
-    const hit = await withStore('readonly', (store) => store.get(word));
+    const hit = await withStore(VOCABULARY_STORE, 'readonly', (store) =>
+      store.get(word),
+    );
     return hit != null;
   }
 
