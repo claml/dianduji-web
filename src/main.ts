@@ -166,6 +166,7 @@ function applyReadingStyle(): void {
 }
 
 async function showWord(word: string, tokenIndex: number, sentence = ''): Promise<void> {
+  closeAllPanels();
   currentWord = word;
   currentEntry = null;
   currentSentence = sentence;
@@ -512,6 +513,11 @@ phraseSave.addEventListener('click', async () => {
   }
 });
 customDefAdd.addEventListener('click', () => {
+  // Keep the word card (it hosts the dialog trigger); close the others.
+  bookPanel.hidden = true;
+  outlinePanel.hidden = true;
+  settingsOverlay.hidden = true;
+  reviewOverlay.hidden = true;
   customDefWord.textContent = currentWord;
   customDefInput.value = '';
   customDefOverlay.hidden = false;
@@ -527,8 +533,20 @@ customDefCancel.addEventListener('click', () => {
   customDefOverlay.hidden = true;
 });
 
+/** Closes every floating panel/overlay so only the newly opened one shows. */
+function closeAllPanels(): void {
+  wordCard.hidden = true;
+  bookPanel.hidden = true;
+  outlinePanel.hidden = true;
+  settingsOverlay.hidden = true;
+  customDefOverlay.hidden = true;
+  reviewOverlay.hidden = true;
+}
+
 outlineBtn.addEventListener('click', () => {
-  outlinePanel.hidden = !outlinePanel.hidden;
+  const willOpen = outlinePanel.hidden;
+  closeAllPanels();
+  outlinePanel.hidden = !willOpen;
   if (!outlinePanel.hidden) void renderOutline();
 });
 outlineClose.addEventListener('click', () => {
@@ -536,7 +554,9 @@ outlineClose.addEventListener('click', () => {
 });
 
 bookBtn.addEventListener('click', () => {
-  bookPanel.hidden = !bookPanel.hidden;
+  const willOpen = bookPanel.hidden;
+  closeAllPanels();
+  bookPanel.hidden = !willOpen;
   if (!bookPanel.hidden) void renderBook();
 });
 bookClose.addEventListener('click', () => {
@@ -581,7 +601,10 @@ function showReviewCard(): void {
   reviewNext.hidden = true;
 }
 
-reviewBtn.addEventListener('click', () => void startReview());
+reviewBtn.addEventListener('click', () => {
+  closeAllPanels();
+  void startReview();
+});
 reviewReveal.addEventListener('click', () => {
   reviewDefinition.hidden = false;
   reviewReveal.hidden = true;
@@ -624,6 +647,7 @@ tabPhrases.addEventListener('click', () => {
 });
 
 settingsBtn.addEventListener('click', () => {
+  closeAllPanels();
   gatewayUrlInput.value = loadGatewayUrl();
   onlineEnabledInput.checked = onlineEnabled();
   themeSelect.value = localStorage.getItem(THEME_KEY) ?? 'system';

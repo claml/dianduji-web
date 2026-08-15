@@ -252,8 +252,8 @@ canvas { display: block; box-shadow: 0 2px 14px rgb(0 0 0 / 0.18); background: #
 #custom-def-overlay {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 0.35);
-  z-index: 30;
+  background: rgb(0 0 0 / 0.45);
+  z-index: 45;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -415,7 +415,7 @@ canvas { display: block; box-shadow: 0 2px 14px rgb(0 0 0 / 0.18); background: #
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 0.45);
-  z-index: 35;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -450,8 +450,8 @@ canvas { display: block; box-shadow: 0 2px 14px rgb(0 0 0 / 0.18); background: #
 #settings-overlay {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 0.35);
-  z-index: 30;
+  background: rgb(0 0 0 / 0.45);
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
