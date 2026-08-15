@@ -132,7 +132,7 @@ if (typeof idleCallback === 'function') {
 }
 const specialized = new SpecializedDictionary();
 const phraseDict = new PhraseDictionary();
-const translator = new GatewayTranslator();
+const translator = new GatewayTranslator(undefined, undefined, () => syncEngine.bearerToken);
 const book = new VocabularyBook();
 const phrases = new PhraseStore();
 const customDefs = new CustomDefinitionStore();
@@ -268,6 +268,9 @@ async function showOnlineFallback(word: string): Promise<void> {
   if (outcome.ok) {
     wordMeaning.textContent = outcome.result.termTranslation;
     wordSource.textContent = `在线翻译（${outcome.result.sourceId}）`;
+  } else if (outcome.reason === 'unauthorized') {
+    wordMeaning.textContent = '词库未收录';
+    wordSource.textContent = '在线翻译需登录后使用（设置 → 账号与云同步）';
   } else if (outcome.reason === 'offline') {
     wordMeaning.textContent = '词库未收录';
     wordSource.textContent = '在线翻译不可用（网关未运行？可在设置中修改地址）';
@@ -486,6 +489,8 @@ sentenceTranslate.addEventListener('click', async () => {
   const outcome = await translator.translateSentence(currentSentence);
   if (outcome.ok) {
     sentenceTranslation.textContent = outcome.result.sentenceTranslation;
+  } else if (outcome.reason === 'unauthorized') {
+    sentenceTranslation.textContent = '在线翻译需登录后使用（设置 → 账号与云同步）';
   } else if (outcome.reason === 'offline') {
     sentenceTranslation.textContent = '在线翻译不可用（网关未运行？可在设置中修改地址）';
   } else {

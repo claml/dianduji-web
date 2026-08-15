@@ -43,6 +43,11 @@ export class WebSyncEngine {
     return this.token != null && this.user != null;
   }
 
+  /** Bearer token for authenticated gateway calls (paid endpoints). */
+  get bearerToken(): string | null {
+    return this.token;
+  }
+
   async register(username: string, password: string): Promise<void> {
     const result = await this.client.register(username, password);
     await this.establish(result.token, result.user);

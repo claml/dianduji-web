@@ -15,7 +15,7 @@ export interface OnlineTranslation {
 
 export type TranslateOutcome =
   | { ok: true; result: OnlineTranslation }
-  | { ok: false; reason: 'offline' | 'error' };
+  | { ok: false; reason: 'offline' | 'unauthorized' | 'error' };
 
 export interface OnlineTranslator {
   translate(term: string): Promise<TranslateOutcome>;
@@ -47,6 +47,7 @@ export class GatewayTranslator implements OnlineTranslator {
   constructor(
     private readonly baseUrl: string = loadGatewayUrl(),
     fetchImpl: typeof fetch = fetch.bind(globalThis),
+    private readonly tokenProvider?: () => string | null,
   ) {
     this.fetchImpl = fetchImpl;
   }
@@ -71,7 +72,13 @@ export class GatewayTranslator implements OnlineTranslator {
     // preflight); retry once before reporting offline.
     for (let attempt = 0; attempt < 2; attempt++) {
       const outcome = await this.tryCall(payload);
-      if (outcome.ok || outcome.reason === 'error') return outcome;
+      if (
+        outcome.ok ||
+        outcome.reason === 'error' ||
+        outcome.reason === 'unauthorized'
+      ) {
+        return outcome;
+      }
       if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 400));
     }
     return { ok: false, reason: 'offline' };
@@ -81,11 +88,17 @@ export class GatewayTranslator implements OnlineTranslator {
     term: string;
     sentence: string;
   }): Promise<TranslateOutcome> {
+    // Paid gateway endpoints require a login session.
+    const token = this.tokenProvider?.() ?? null;
+    if (!token) return { ok: false, reason: 'unauthorized' };
     let response: Response;
     try {
       response = await this.fetchImpl(this.baseUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(12000),
       });
@@ -94,6 +107,7 @@ export class GatewayTranslator implements OnlineTranslator {
       console.error('gateway fetch failed:', error);
       return { ok: false, reason: 'offline' };
     }
+    if (response.status === 401) return { ok: false, reason: 'unauthorized' };
     if (!response.ok) return { ok: false, reason: 'error' };
     try {
       const body = (await response.json()) as {
