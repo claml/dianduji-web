@@ -28,6 +28,13 @@
 
 * { box-sizing: border-box; }
 
+/* The hidden attribute must win over display:flex on overlays/panels;
+   author styles otherwise override the UA's [hidden]{display:none} and
+   every dialog stays visible from page load. */
+[hidden] {
+  display: none !important;
+}
+
 html, body {
   margin: 0;
   height: 100%;
